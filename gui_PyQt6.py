@@ -43,7 +43,31 @@ except ModuleNotFoundError:
     from PySide6.QtGui import QColor, QFont, QTextCharFormat
 
 
-class LoadTextGroup(QWidget):
+class CustomQWidget(QWidget):
+    '''
+    Сразу создаём ряд общих параметров для всех элементов GUI этой программы.
+
+    Ссылка на ядро программы, забираемая из такой же переменной у родителя:
+    self.core: Core = self.parent().core
+
+    Cылка на передатчик для отправки ядру сообщений:
+    self.send_to_core = self.parent().send_to_core
+
+    Ссылка на функцию вызова окна с ошибкой:
+    self.show_error = self.parent().show_error
+
+    Обазательность указания родителя при инициализации
+    (для передачи всех ссылок от корневого окна по цепочке):
+    def __init__(self, parent: QWidget)
+    '''
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        self.core: Core = self.parent().core
+        self.send_to_core = self.parent().send_to_core
+        self.show_error = self.parent().show_error
+
+
+class LoadTextGroup(CustomQWidget):
     '''
     Группировка элементов отвечающих за загрузку текста
     ----------------------------------------------------
@@ -55,9 +79,6 @@ class LoadTextGroup(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         # КНОПКА сброса загруженного файла
@@ -130,7 +151,7 @@ class LoadTextGroup(QWidget):
         self.text_statistics.setText('...текст не загружен...')
 
 
-class QueueTab(QWidget):
+class QueueTab(CustomQWidget):
     '''
     Вкладка с очередью слов
     Содержит/выполняет:
@@ -159,9 +180,6 @@ class QueueTab(QWidget):
     def __init__(self, parent: QWidget, tabs_container: QTabWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         # КНОПКИ сортировки
@@ -311,7 +329,7 @@ class QueueTab(QWidget):
         self.statistics.setText(t)
 
 
-class TextFragmentGroup(QWidget):
+class TextFragmentGroup(CustomQWidget):
     '''
     Группировка элементов для работы с текущим словом
     и его текстовыми фрагментами
@@ -325,9 +343,6 @@ class TextFragmentGroup(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         # КНОПКА перехода к предыдущей позиции слова
@@ -426,7 +441,7 @@ class TextFragmentGroup(QWidget):
             self.text_fragment.setText('')
 
 
-class DecisionButtonsGroup(QWidget):
+class DecisionButtonsGroup(CustomQWidget):
     '''
     Динамически создающиеся кнопки для отправки слова в какую-либо базу
     (кнопки привязываются к загруженным слотам баз)
@@ -438,9 +453,6 @@ class DecisionButtonsGroup(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         # КНОПКА "пропустить"
@@ -485,7 +497,7 @@ class DecisionButtonsGroup(QWidget):
             )
 
 
-class WorkTab(QWidget):
+class WorkTab(CustomQWidget):
     '''
     ВКЛАДКА РАБОТЫ СО СЛОВАМИ
     ____________________________
@@ -512,9 +524,6 @@ class WorkTab(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         self.load_text_group = LoadTextGroup(self)
@@ -554,7 +563,7 @@ class WorkTab(QWidget):
         self.tabs.setTabText(1, f'Имена ({self.core.count_names})')
 
 
-class WordsToSaveTab(QWidget):
+class WordsToSaveTab(CustomQWidget):
     '''
     ВКЛАДКА СО СЛОВАМИ ОТОБРАННЫМИ В БАЗЫ
     Одна из корневых вкладок окна
@@ -569,15 +578,12 @@ class WordsToSaveTab(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         pass
 
 
-class DataBaseSlot(QWidget):
+class DataBaseSlot(CustomQWidget):
     '''
     Сгруппированные элементы для работы с добавлением баз данных
     - текстовое поле для пути
@@ -590,9 +596,6 @@ class DataBaseSlot(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         # Настройка корневого лейаута
@@ -695,7 +698,7 @@ class DataBaseSlot(QWidget):
         self.deleteLater()
 
 
-class ConfigTab(QWidget):
+class ConfigTab(CustomQWidget):
     '''
     ВКЛАДКА С ЗАГРУЖЕННЫМИ БАЗАМИ И ПРОЧЕЙ КОНФИГУРАЦИЕЙ
     Одна из корневых вкладок окна
@@ -709,9 +712,6 @@ class ConfigTab(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
-        self.core: Core = self.parent().core
-        self.send_to_core = self.parent().send_to_core
-        self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
         # Прокручиваемая область со слотами баз
