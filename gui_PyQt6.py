@@ -577,6 +577,124 @@ class WordsToSaveTab(QWidget):
         pass
 
 
+class DataBaseSlot(QWidget):
+    '''
+    Сгруппированные элементы для работы с добавлением баз данных
+    - текстовое поле для пути
+    - кнопка загрузить
+    - кнопка убрать слот
+    - кнопка сбросить загруженную базу
+    - чек-бокс - флаг использования базы
+    - надписи: имя, информация
+    '''
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        root = QVBoxLayout(self)
+        self.core: Core = self.parent().core
+        self.send_to_core = self.parent().send_to_core
+        self.show_error = self.parent().show_error
+
+        '''Создаём объекты, задаём параметры'''
+        # Настройка корневого лейаута
+        root.setAlignment(Qt.AlignmentFlag.AlignTop)
+        root.setContentsMargins(QMargins(0,0,0,0))
+
+        # Надпись с именем базы
+        self.db_name = QLabel()
+        self.db_name.setVisible(False)
+
+        # Информация по базе данных (сколько в ней слов)
+        self.db_description = QLabel('...база не загружена...')
+
+        # Текстовое поле для ввода пути к файлу базы
+        self.db_path = QLineEdit()
+        self.db_path.setPlaceholderText('путь к файлу...')
+
+        # КНОПКА загрузки базы слов
+        self.load_db = QPushButton('Загрузить')
+
+        # КНОПКА для сброса (изменения) загруженной базы
+        self.drop_db = QPushButton('#')
+        self.drop_db.setMaximumWidth(30)
+        self.drop_db.setVisible(False)
+
+        # КНОПКА для удаления текущего слота с базой слов
+        self.delete_db_slot = QPushButton('-')
+        self.delete_db_slot.setMaximumWidth(30)
+
+        # Чек-бокс использовать ли слова базы при анализе текста
+        self.in_use = QCheckBox('Использовать')
+
+        '''Размещаем объекты'''
+        line1 = QHBoxLayout()
+        line1.addWidget(self.drop_db)
+        line1.addWidget(self.db_path)
+        line1.addWidget(self.load_db)
+        line1.addWidget(self.db_name)
+
+        line2 = QHBoxLayout()
+        line2.addWidget(self.delete_db_slot)
+        line2.addStretch()
+        line2.addWidget(self.db_description)
+        line2.addStretch()
+        line2.addWidget(self.in_use)
+
+        root.addLayout(line1)
+        root.addLayout(line2)
+
+        '''Подключаем кнопки/события к функциям'''
+        self.load_db.clicked.connect(self.on_button_load_db_clicked)
+        self.drop_db.clicked.connect(self.on_button_drop_db_clicked)
+        self.delete_db_slot.clicked.connect(
+            self.on_button_delete_db_slot_clicked
+        )
+
+
+    def on_button_load_db_clicked(self):
+        file_path = self.db_path.text()
+        if not file_path:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                'Выберите файл базы данных',
+                None,
+                'abooktools DB (*.abtdb)'
+            )
+        if file_path:
+            try:
+                pass
+            except Exception:
+                self.show_error(traceback.format_exc())
+            else:
+                self.db_name.setVisible(True)
+                self.db_name.setText('<без имени>')
+
+                t = f'Слов: {0} | '
+                t+= f'{0}'
+                t+= f' {0}'
+                self.db_description.setText(t)
+
+                self.load_db.setVisible(False)
+                self.drop_db.setVisible(True)
+
+                self.db_path.setText(str(file_path))
+                self.db_path.setReadOnly(True)
+
+                self.in_use.setChecked(True)
+
+    def on_button_drop_db_clicked(self):
+        self.db_name.setVisible(False)
+        self.db_name.setText('')
+        self.db_path.setText('')
+        self.db_path.setReadOnly(False)
+        self.db_description.setText('...база не загружена')
+        self.load_db.setVisible(True)
+        self.drop_db.setVisible(False)
+        self.in_use.setChecked(False)
+
+    def on_button_delete_db_slot_clicked(self):
+        self.deleteLater()
+
+
 class ConfigTab(QWidget):
     '''
     ВКЛАДКА С ЗАГРУЖЕННЫМИ БАЗАМИ И ПРОЧЕЙ КОНФИГУРАЦИЕЙ
@@ -596,8 +714,51 @@ class ConfigTab(QWidget):
         self.show_error = self.parent().show_error
 
         '''Создаём объекты, задаём параметры'''
+        # Прокручиваемая область со слотами баз
+        db_slots_widget = QWidget(self)
+        self.db_slots = QVBoxLayout(db_slots_widget)
+        self.db_slots.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.db_slots.setSpacing(20)
+
+        scroll = QScrollArea()
+        scroll.setWidget(db_slots_widget)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        # КНОПКА добавления слота
+        add_db_slot = QPushButton('Добавить слот базы')
+
+        # КНОПКА создания новой пустой базы
+        create_db = QPushButton('Создать пустую базу')
+
         '''Размещаем объекты'''
+        line = QHBoxLayout()
+        line.addWidget(add_db_slot)
+        line.addWidget(create_db)
+
+        root.addWidget(scroll)
+        root.addLayout(line)
+
         '''Подключаем кнопки/события к функциям'''
+        add_db_slot.clicked.connect(self.create_db_slot)
+
+
+    def create_db_slot(self):
+        '''
+        Создание слота для загрузки базы данных
+        '''
+        self.db_slots.addWidget(DataBaseSlot(self))
+
+    def create_empty_db(self):
+        '''
+        Создать по выбранному пути файл с новой пустой базой
+        '''
+
         pass
 
 
