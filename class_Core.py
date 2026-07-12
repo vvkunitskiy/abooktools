@@ -119,8 +119,7 @@ class Core:
     def count_names(self) -> int:
         return self.__names_queue.count
 
-    @property
-    def database(index: int) -> DataBase:
+    def database(self, index: int) -> DataBase:
         return self.__dbs[index]
 
     def core_receiver(self, msg: UiMsg, extra = None):
@@ -270,6 +269,9 @@ class Core:
 
             case UiMsg.DB_SLOT_ADDED:
                 self.__dbs.append(DataBase())
+
+            case UiMsg.DB_SLOT_DELETED:
+                self.__dbs.pop(extra)
 
     def __send_to_ui(self, msg: CoreMsg, extra = None):
         self.ui.ui_receiver(msg, extra)

@@ -98,6 +98,18 @@ class DataBase:
         self.__is_db_saved = True
         self.__path = file_path
 
+    def drop(self):
+        '''
+        Сбрасывает загруженную базу (однако слова в буфере остаются)
+        '''
+        self.__is_db_saved = True
+        self.__in_use = False
+        self.__path = None
+        self.__name = ''
+        self.__description = ''
+        self.__tags.clear()
+        self.__words.clear()
+
     def save(self,
         file_path: Path = None,
         save_without_new_words: bool = False,

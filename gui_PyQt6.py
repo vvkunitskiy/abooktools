@@ -597,6 +597,9 @@ class DataBaseSlot(CustomQWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
 
+        self.slots: list[DataBaseSlot] = self.parent().slot_list
+        self.slots.append(self)
+
         '''Создаём объекты, задаём параметры'''
         # Настройка корневого лейаута
         root.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -652,6 +655,28 @@ class DataBaseSlot(CustomQWidget):
             self.on_button_delete_db_slot_clicked
         )
 
+    def on_db_load(self, file_path):
+        self.db_name.setVisible(True)
+        self.db_name.setText(
+            self.core.database(self.slots.index(self)).name
+        )
+
+        t = f'Слов: '
+        t+= f'{self.core.database(self.slots.index(self)).word_count}'
+        t+= f' | '
+        t+= f'{self.core.database(self.slots.index(self)).description}'
+        t+= f' {self.core.database(self.slots.index(self)).tags}'
+        self.db_description.setText(t)
+
+        self.load_db.setVisible(False)
+        self.drop_db.setVisible(True)
+
+        self.db_path.setText(str(file_path))
+        self.db_path.setReadOnly(True)
+
+        self.in_use.setChecked(
+            self.core.database(self.slots.index(self)).in_use()
+        )
 
     def on_button_load_db_clicked(self):
         file_path = self.db_path.text()
@@ -664,27 +689,17 @@ class DataBaseSlot(CustomQWidget):
             )
         if file_path:
             try:
-                pass
+                self.core.database(
+                    self.slots.index(self)
+                ).load(Path(file_path))
             except Exception:
                 self.show_error(traceback.format_exc())
             else:
-                self.db_name.setVisible(True)
-                self.db_name.setText('<без имени>')
-
-                t = f'Слов: {0} | '
-                t+= f'{0}'
-                t+= f' {0}'
-                self.db_description.setText(t)
-
-                self.load_db.setVisible(False)
-                self.drop_db.setVisible(True)
-
-                self.db_path.setText(str(file_path))
-                self.db_path.setReadOnly(True)
-
-                self.in_use.setChecked(True)
+                self.on_db_load(file_path)
+                self.core.database(self.slots.index(self)).in_use(True)
 
     def on_button_drop_db_clicked(self):
+        self.core.database(self.slots.index(self)).drop()
         self.db_name.setVisible(False)
         self.db_name.setText('')
         self.db_path.setText('')
@@ -695,6 +710,8 @@ class DataBaseSlot(CustomQWidget):
         self.in_use.setChecked(False)
 
     def on_button_delete_db_slot_clicked(self):
+        self.send_to_core(UiMsg.DB_SLOT_DELETED, self.slots.index(self))
+        self.slots.remove(self)
         self.deleteLater()
 
 
@@ -712,6 +729,9 @@ class ConfigTab(CustomQWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
+        
+        #Список для хранения ссылок на виджеты слотов
+        self.slot_list: list[DataBaseSlot] = []
 
         '''Создаём объекты, задаём параметры'''
         # Прокручиваемая область со слотами баз
@@ -753,6 +773,7 @@ class ConfigTab(CustomQWidget):
         Создание слота для загрузки базы данных
         '''
         self.db_slots.addWidget(DataBaseSlot(self))
+        self.send_to_core(UiMsg.DB_SLOT_ADDED)
 
     def create_empty_db(self):
         '''
