@@ -1,5 +1,6 @@
 # Python libs
 from itertools import chain
+from pathlib import Path
 
 
 # Project files
@@ -16,6 +17,8 @@ class Core:
     def __init__(self):
         self.ui = None
         self.__config: Config = Config()
+        self.__last_dir_for_text: str = None
+        self.__last_dir_for_db: str = None
         self.__dbs: list[DataBase] = []
         self.__text: Text = Text()
         self.__words_queue: Queue = Queue()
@@ -122,6 +125,17 @@ class Core:
     def database(self, index: int) -> DataBase:
         return self.__dbs[index]
 
+    @property
+    def last_dir_for_db(self) -> str:
+        return self.__last_dir_for_db
+
+    @property
+    def last_dir_for_text(self) -> str:
+        return self.__last_dir_for_text
+
+    def load_config(self):
+        self.__config_load()
+
     def core_receiver(self, msg: UiMsg, extra = None):
         match msg:
             case UiMsg.TEST:
@@ -129,6 +143,8 @@ class Core:
 
             case UiMsg.LOAD_TEXT:
                 self.__text.load(extra)
+                self.__last_dir_for_text = str(extra.parent)
+                self.__config_save()
                 self.__collect_new_words()
                 self.__send_to_ui(CoreMsg.TEXT_LOADED)
 
@@ -269,29 +285,56 @@ class Core:
 
             case UiMsg.DB_SLOT_ADDED:
                 self.__dbs.append(DataBase())
+                self.__config_save()
 
             case UiMsg.DB_SLOT_DELETED:
                 self.__dbs.pop(extra)
+                self.__config_save()
+
+            case UiMsg.LOAD_DB:
+                path: Path = extra['path']
+                self.__dbs[extra['slot']].load(path)
+                self.__dbs[extra['slot']].in_use(True)
+                self.__last_dir_for_db = str(path.parent)
+                self.__config_save()
+
+            case UiMsg.DROP_DB:
+                self.__dbs[extra].drop()
+                self.__dbs[extra].in_use(False)
+                self.__config_save()
+
+            case UiMsg.DB_IN_USE_STATUS_CHANGED:
+                self.__dbs[extra['slot']].in_use(extra['state'])
+                self.__config_save()
 
     def __send_to_ui(self, msg: CoreMsg, extra = None):
         self.ui.ui_receiver(msg, extra)
 
     def __config_load(self):
         self.__config.load()
+        self.__last_dir_for_text = self.__config['last_dir_for_text']
+        self.__last_dir_for_db = self.__config['last_dir_for_db']
         # Подтягиваем базы данных
         if self.__config.get('databases'):
-            for db_path, db_status in self.__config['databases'].items():
+            for record in self.__config['databases']:
                 db = DataBase()
-                db.load(db_path)
-                db.in_use(db_status)
-                self.dbs.append(db)
-                self.send_to_ui(CoreMsg.ADD_DB_SLOT)
+                if record['path']:
+                    db.load(Path(record['path']))
+                db.in_use(record['in_use'])
+                self.__dbs.append(db)
+                self.__send_to_ui(CoreMsg.DB_SLOT_ADDED)
 
     def __config_save(self):
+        self.__config['last_dir_for_text'] = self.__last_dir_for_text
+        self.__config['last_dir_for_db'] = self.__last_dir_for_db
         # Заносим базы данных
         self.__config['databases'].clear()
-        for db in self.dbs:
-            self.__config['databases'][db.path] = db.in_use()
+        for db in self.__dbs:
+            self.__config['databases'].append({
+                'path': str(db.path) if db.path else None,
+                'in_use': db.in_use()
+            })
+        self.__config.save()
 
     def __collect_new_words(self):
         active_dbs = []

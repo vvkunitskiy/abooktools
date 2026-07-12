@@ -120,7 +120,7 @@ class LoadTextGroup(CustomQWidget):
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 'Выберите текстовый файл',
-                None,
+                self.core.last_dir_for_text,
                 'utf-8 text (*.txt)'
             )
         if file_path:
@@ -654,6 +654,9 @@ class DataBaseSlot(CustomQWidget):
         self.delete_db_slot.clicked.connect(
             self.on_button_delete_db_slot_clicked
         )
+        self.in_use.checkStateChanged.connect(
+            self.on_in_use_checkbox_state_changed
+        )
 
     def on_db_load(self, file_path):
         self.db_name.setVisible(True)
@@ -671,7 +674,7 @@ class DataBaseSlot(CustomQWidget):
         self.load_db.setVisible(False)
         self.drop_db.setVisible(True)
 
-        self.db_path.setText(str(file_path))
+        self.db_path.setText(str(file_path) if file_path else '')
         self.db_path.setReadOnly(True)
 
         self.in_use.setChecked(
@@ -684,22 +687,25 @@ class DataBaseSlot(CustomQWidget):
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 'Выберите файл базы данных',
-                None,
+                self.core.last_dir_for_db,
                 'abooktools DB (*.abtdb)'
             )
         if file_path:
             try:
-                self.core.database(
-                    self.slots.index(self)
-                ).load(Path(file_path))
+                self.send_to_core(
+                    UiMsg.LOAD_DB,
+                    {
+                        'slot': self.slots.index(self),
+                        'path': Path(file_path)
+                    }
+                )
             except Exception:
                 self.show_error(traceback.format_exc())
             else:
                 self.on_db_load(file_path)
-                self.core.database(self.slots.index(self)).in_use(True)
 
     def on_button_drop_db_clicked(self):
-        self.core.database(self.slots.index(self)).drop()
+        self.send_to_core(UiMsg.DROP_DB, self.slots.index(self))
         self.db_name.setVisible(False)
         self.db_name.setText('')
         self.db_path.setText('')
@@ -714,6 +720,15 @@ class DataBaseSlot(CustomQWidget):
         self.slots.remove(self)
         self.deleteLater()
 
+    def on_in_use_checkbox_state_changed(self):
+        self.send_to_core(
+            UiMsg.DB_IN_USE_STATUS_CHANGED,
+            {
+                'slot': self.slots.index(self),
+                'state': self.in_use.isChecked()
+            }
+        )
+Qt.CheckState
 
 class ConfigTab(CustomQWidget):
     '''
@@ -768,12 +783,18 @@ class ConfigTab(CustomQWidget):
         add_db_slot.clicked.connect(self.create_db_slot)
 
 
-    def create_db_slot(self):
+    def create_db_slot(self, from_core=False):
         '''
         Создание слота для загрузки базы данных
         '''
-        self.db_slots.addWidget(DataBaseSlot(self))
-        self.send_to_core(UiMsg.DB_SLOT_ADDED)
+        db_slot = DataBaseSlot(self)
+        self.db_slots.addWidget(db_slot)
+        if not from_core:
+            self.send_to_core(UiMsg.DB_SLOT_ADDED)
+        if from_core:
+            db_slot.in_use.setChecked(self.core.database(-1).in_use())
+            if self.core.database(-1).path:
+                db_slot.on_db_load(self.core.database(-1).path)
 
     def create_empty_db(self):
         '''
@@ -796,6 +817,7 @@ class MainWindow(QMainWindow):
         self.core.ui = self
 
         self.init_widgets()
+        self.core.load_config()
         self.show()
         self.application.exec()
 
@@ -840,7 +862,8 @@ class MainWindow(QMainWindow):
                 self.work_tab.text_fragment_group.refresh()
 
             case CoreMsg.DB_SLOT_ADDED:
-                self.work_tab.decision_buttons_group.add_db_button()
+                self.config_tab.create_db_slot(from_core=True)
+                #self.work_tab.decision_buttons_group.add_db_button()
 
             case CoreMsg.DB_LOADED:
                 self.work_tab.decision_buttons_group.refresh()

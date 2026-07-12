@@ -8,6 +8,9 @@ class Config(dict):
     __config_path: Path = Path('abooktools.config')
     def __init__(self):
         super().__init__()
+        self['last_dir_for_text'] = None
+        self['last_dir_for_db'] = None
+        self['databases'] = []
 
     def load(self):
 
