@@ -4,7 +4,9 @@ from enum import Enum
 class CoreMsg(Enum):
     TEST = 'Тестовое сообщение'
     DB_SLOT_ADDED = 'Ядром добавлен слот для базы данных'
+    DB_SLOT_DELETED = 'Ядром удалён слот для базы данных'
     DB_LOADED = 'Ядром загружена база данных'
+    DB_DROPED = 'Ядром выгружена база данных'
     TEXT_LOADED = 'Текст из текстового файла загружен ядром'
     TEXT_DROPED = 'Текст сброшен ядром'
     WORD_POSITION_CHANGED = 'Ядром изменена текущая позиция текущего слова'

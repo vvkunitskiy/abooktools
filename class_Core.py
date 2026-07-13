@@ -290,6 +290,7 @@ class Core:
             case UiMsg.DB_SLOT_DELETED:
                 self.__dbs.pop(extra)
                 self.__config_save()
+                self.__send_to_ui(CoreMsg.DB_SLOT_DELETED, extra)
 
             case UiMsg.LOAD_DB:
                 path: Path = extra['path']
@@ -297,11 +298,13 @@ class Core:
                 self.__dbs[extra['slot']].in_use(True)
                 self.__last_dir_for_db = str(path.parent)
                 self.__config_save()
+                self.__send_to_ui(CoreMsg.DB_LOADED)
 
             case UiMsg.DROP_DB:
                 self.__dbs[extra].drop()
                 self.__dbs[extra].in_use(False)
                 self.__config_save()
+                self.__send_to_ui(CoreMsg.DB_DROPED)
 
             case UiMsg.DB_IN_USE_STATUS_CHANGED:
                 self.__dbs[extra['slot']].in_use(extra['state'])
@@ -318,11 +321,13 @@ class Core:
         if self.__config.get('databases'):
             for record in self.__config['databases']:
                 db = DataBase()
+                self.__dbs.append(db)
+                db.in_use(record['in_use'])
                 if record['path']:
                     db.load(Path(record['path']))
-                db.in_use(record['in_use'])
-                self.__dbs.append(db)
                 self.__send_to_ui(CoreMsg.DB_SLOT_ADDED)
+                if record['path']:
+                    self.__send_to_ui(CoreMsg.DB_LOADED)
 
     def __config_save(self):
         self.__config['last_dir_for_text'] = self.__last_dir_for_text

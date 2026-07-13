@@ -462,39 +462,58 @@ class DecisionButtonsGroup(CustomQWidget):
         self.ignore = QPushButton('Игнорировать')
 
         # КНОПКИ добавления в базы
-        self.add = {}
+        self.db_buttons = []
 
         '''Размещаем объекты'''
         line = QHBoxLayout()
         line.addWidget(self.ignore)
         line.addWidget(self.skip)
 
+        #self.db = QWidget()
         self.db_layout = QVBoxLayout()
+        #self.db.setLayout(self.db_layout)
 
         root.addLayout(line)
         root.addLayout(self.db_layout)
 
         '''Подключаем кнопки/события к функциям'''
-        self.skip.clicked.connect(lambda: \
-            self.send_to_core(UiMsg.SKIP_WORD))
-        self.ignore.clicked.connect(lambda: \
-            self.send_to_core(UiMsg.IGNORE_WORD))
+        self.skip.clicked.connect(
+            lambda: self.send_to_core(UiMsg.SKIP_WORD)
+        )
+        self.ignore.clicked.connect(
+            lambda: self.send_to_core(UiMsg.IGNORE_WORD)
+        )
 
     def add_db_button(self):
         # Создаём
-        key = len(self.add)
-        button = QPushButton(f'Слот {key}: база не загружена')
-        self.add[key] = button
+        button = QPushButton(f'Слот {len(self.db_buttons)}: база не загружена')
+        button.setVisible(False)
+        self.db_buttons.append(button)
         # Размещаем
         self.db_layout.addWidget(button)
         # Подключаем к функции
-        button.clicked.connect(self.send_to_core(UiMsg.ADD_WORD_TO_BASE, key))
+        button.clicked.connect(
+            lambda: self.send_to_core(
+                UiMsg.ADD_WORD_TO_BASE,
+                self.db_buttons.index(button)
+            )
+        )
+
+    def delete_db_button(self, index):
+        self.db_buttons.pop(index).deleteLater()
 
     def refresh(self):
-        for button in self.db_layout.children():
-            button.setText(
-                self.core.database(self.db_layout.indexOf(button)).name
-            )
+        for i, button in enumerate(self.db_buttons):
+            if self.core.database(i).path:
+                if self.core.database(i).name:
+                    button.setText(self.core.database(i).name)
+                else:
+                    button.setText(
+                        f'<{self.core.database(i).path.name}><без имени>'
+                    )
+                button.setVisible(True)
+            else:
+                button.setVisible(False)
 
 
 class WorkTab(CustomQWidget):
@@ -654,8 +673,8 @@ class DataBaseSlot(CustomQWidget):
         self.delete_db_slot.clicked.connect(
             self.on_button_delete_db_slot_clicked
         )
-        self.in_use.checkStateChanged.connect(
-            self.on_in_use_checkbox_state_changed
+        self.in_use.clicked.connect(
+            self.on_in_use_checkbox_clicked
         )
 
     def on_db_load(self, file_path):
@@ -720,7 +739,7 @@ class DataBaseSlot(CustomQWidget):
         self.slots.remove(self)
         self.deleteLater()
 
-    def on_in_use_checkbox_state_changed(self):
+    def on_in_use_checkbox_clicked(self):
         self.send_to_core(
             UiMsg.DB_IN_USE_STATUS_CHANGED,
             {
@@ -863,9 +882,16 @@ class MainWindow(QMainWindow):
 
             case CoreMsg.DB_SLOT_ADDED:
                 self.config_tab.create_db_slot(from_core=True)
-                #self.work_tab.decision_buttons_group.add_db_button()
+                self.work_tab.decision_buttons_group.add_db_button()
+
+            case CoreMsg.DB_SLOT_DELETED:
+                self.work_tab.decision_buttons_group.delete_db_button(extra)
+                self.work_tab.decision_buttons_group.refresh()
 
             case CoreMsg.DB_LOADED:
+                self.work_tab.decision_buttons_group.refresh()
+
+            case CoreMsg.DB_DROPED:
                 self.work_tab.decision_buttons_group.refresh()
 
             case CoreMsg.NEXT_WORD:
