@@ -747,7 +747,7 @@ class DataBaseSlot(CustomQWidget):
                 'state': self.in_use.isChecked()
             }
         )
-Qt.CheckState
+
 
 class ConfigTab(CustomQWidget):
     '''
