@@ -323,6 +323,11 @@ class QueueTab(CustomQWidget):
             if word == self.core.current_word:
                 self.list.setCurrentRow(i)
 
+        index = self.list.indexFromItem(self.list.currentItem())
+        index = index.siblingAtRow(index.row() - 2)
+
+        self.list.scrollTo(index, self.list.ScrollHint.PositionAtTop)
+
         t = f'Обработано: {self.core.current_queue.count_handled}\n'
         t+= f'Исключены: {self.core.current_queue.count_ignored}\n'
         t+= f'Осталось: {self.core.current_queue.count_pending}'
@@ -582,6 +587,38 @@ class WorkTab(CustomQWidget):
         self.tabs.setTabText(1, f'Имена ({self.core.count_names})')
 
 
+class WordsToDBGroup(CustomQWidget):
+    def __init__(self, parent: QWidget, database: DataBase):
+        super().__init__(parent)
+        root = QVBoxLayout(self)
+        self.db = database
+
+        '''Создаём объекты, задаём параметры'''
+        title = QLabel(self.db.name)
+        self.word_list = QListWidget()
+        self.save_to_db = QPushButton('Сохранить в базу 0 слов')
+
+        '''Размещаем объекты'''
+        root.addWidget(title)
+        root.addWidget(self.word_list)
+        root.addWidget(self.save_to_db)
+
+        '''Подключаем кнопки/события к функциям'''
+        self.save_to_db.clicked.connect(lambda: self.save_words_to_db())
+
+    def save_words_to_db(self):
+        self.db.save()
+        self.refresh()
+
+    def refresh(self):
+        self.word_list.clear()
+        word_count = 0
+        for word in self.db.buffer:
+            self.word_list.addItem(word)
+            word_count += 1
+        self.save_to_db.setText(f'Сохранить в базу {word_count} слов')
+
+
 class WordsToSaveTab(CustomQWidget):
     '''
     ВКЛАДКА СО СЛОВАМИ ОТОБРАННЫМИ В БАЗЫ
@@ -598,8 +635,47 @@ class WordsToSaveTab(CustomQWidget):
         super().__init__(parent)
         root = QVBoxLayout(self)
 
+        #Список для хранения ссылок на виджеты буферов баз
+        self.w2dbg_list: list[WordsToDBGroup] = []
+
         '''Создаём объекты, задаём параметры'''
+        self.sub_root_widget = CustomQWidget(self)
+        self.sub_root = QVBoxLayout(self.sub_root_widget)
+
+        scroll = QScrollArea()
+        scroll.setWidget(self.sub_root_widget)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        '''Размещаем объекты'''
+        root.addWidget(self.sub_root_widget)
+
+        '''Подключаем кнопки/события к функциям'''
         pass
+
+    def refresh(self):
+        for w in self.sub_root.children():
+            self.sub_root.removeWidget(w)
+        for i, widget in enumerate(self.w2dbg_list):
+            if self.core.database(i).buffer_word_count:
+                self.sub_root.addWidget(widget)
+                widget.refresh()
+
+    def create_words_to_db_group(self):
+        self.w2dbg_list.append(
+            WordsToDBGroup(
+                self,
+                self.core.database(len(self.w2dbg_list))
+            )
+        )
+
+    def delete_words_to_db_group(self, index: int):
+        self.w2dbg_list.pop(index).deleteLater()
 
 
 class DataBaseSlot(CustomQWidget):
@@ -853,8 +929,10 @@ class MainWindow(QMainWindow):
 
         '''Размещаем объекты'''
         self.centralWidget().addTab(self.work_tab, 'Обработка слов')
-        self.centralWidget().\
-            addTab(self.words_to_save_tab, 'Сохранение слов в базы')
+        self.centralWidget().addTab(
+            self.words_to_save_tab,
+            'Сохранение слов в базы'
+        )
         self.centralWidget().addTab(self.config_tab, 'Конфигурация')
 
     def ui_receiver(self, msg: CoreMsg, extra = None):
@@ -883,10 +961,13 @@ class MainWindow(QMainWindow):
             case CoreMsg.DB_SLOT_ADDED:
                 self.config_tab.create_db_slot(from_core=True)
                 self.work_tab.decision_buttons_group.add_db_button()
+                self.words_to_save_tab.create_words_to_db_group()
 
             case CoreMsg.DB_SLOT_DELETED:
                 self.work_tab.decision_buttons_group.delete_db_button(extra)
                 self.work_tab.decision_buttons_group.refresh()
+                self.words_to_save_tab.delete_words_to_db_group(extra)
+                self.words_to_save_tab.refresh()
 
             case CoreMsg.DB_LOADED:
                 self.work_tab.decision_buttons_group.refresh()
@@ -898,6 +979,7 @@ class MainWindow(QMainWindow):
                 self.work_tab.text_fragment_group.refresh()
                 self.work_tab.words_tab.refresh()
                 self.work_tab.names_tab.refresh()
+                self.words_to_save_tab.refresh()
 
     def send_to_core(self, msg: UiMsg, extra = None):
         self.core.core_receiver(msg, extra)
