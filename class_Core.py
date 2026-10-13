@@ -310,6 +310,12 @@ class Core:
                 self.__dbs[extra['slot']].in_use(extra['state'])
                 self.__config_save()
 
+            case UiMsg.CHANGE_CURRENT_WORD:
+                if extra:
+                    while self.current_word != extra:
+                        self.current_queue.goto_next()
+                    self.__send_to_ui(CoreMsg.NEXT_WORD)
+
     def __send_to_ui(self, msg: CoreMsg, extra = None):
         self.ui.ui_receiver(msg, extra)
 

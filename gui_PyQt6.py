@@ -236,6 +236,10 @@ class QueueTab(CustomQWidget):
         for name, button in self.show_mode_buttons.items():
             button.clicked.connect(lambda checked, n=name: self.on_show_mode_button_clicked(n))
 
+        self.list.clicked.connect(
+            lambda: self.send_to_core(UiMsg.CHANGE_CURRENT_WORD, self.list.currentItem().text().split(maxsplit=1)[0] if self.list.currentItem() else None)
+        )
+
     def on_sort_button_clicked(self, button_name):
         match button_name:
             case 'by_alphabet':
