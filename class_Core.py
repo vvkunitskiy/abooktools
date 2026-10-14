@@ -283,6 +283,42 @@ class Core:
                 self.current_queue.goto_next()
                 self.__send_to_ui(CoreMsg.NEXT_WORD)
 
+            case UiMsg.ADD_WORD_TO_BASE_upper:
+                w = str(self.current_word)
+                w = w[0].upper() + w[1:]
+                w = Word(
+                    w,
+                    self.current_word.variants,
+                    self.current_word.stress,
+                    self.current_word.info,
+                    self.current_word.positions,
+                )
+                self.current_queue[self.current_queue.index(self.current_word)] = w
+                self.current_queue.replace_current_word(w)
+                if self.current_queue:
+                    self.current_word.status = WordStatus.HANDLED
+                self.__dbs[extra].buffer.append(self.current_word)
+                self.current_queue.goto_next()
+                self.__send_to_ui(CoreMsg.NEXT_WORD)
+
+            case UiMsg.ADD_WORD_TO_BASE_lower:
+                w = str(self.current_word)
+                w = w[0].lower() + w[1:]
+                w = Word(
+                    w,
+                    self.current_word.variants,
+                    self.current_word.stress,
+                    self.current_word.info,
+                    self.current_word.positions,
+                )
+                self.current_queue[self.current_queue.index(self.current_word)] = w
+                self.current_queue.replace_current_word(w)
+                if self.current_queue:
+                    self.current_word.status = WordStatus.HANDLED
+                self.__dbs[extra].buffer.append(self.current_word)
+                self.current_queue.goto_next()
+                self.__send_to_ui(CoreMsg.NEXT_WORD)
+
             case UiMsg.DB_SLOT_ADDED:
                 self.__dbs.append(DataBase())
                 self.__config_save()

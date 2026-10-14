@@ -90,6 +90,9 @@ class Queue(list):
         '''
         return self.__current_word
 
+    def replace_current_word(self, word: Word):
+        self.__current_word = word
+
     @property
     def pending(self) -> iterator[Word]:
         return (w for w in self if w.status == WordStatus.PENDING)

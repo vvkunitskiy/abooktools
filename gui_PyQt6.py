@@ -495,34 +495,62 @@ class DecisionButtonsGroup(CustomQWidget):
 
     def add_db_button(self):
         # Создаём
+        button_layout = QHBoxLayout()
         button = QPushButton(f'Слот {len(self.db_buttons)}: база не загружена')
+        button_upper = QPushButton(f'/\\')
+        button_lower = QPushButton(f'\\/')
         button.setVisible(False)
-        self.db_buttons.append(button)
+        button_upper.setVisible(False)
+        button_lower.setVisible(False)
+        elements = [button, button_upper, button_lower, button_layout]
+        self.db_buttons.append(elements)
+
         # Размещаем
-        self.db_layout.addWidget(button)
+        button_layout.addWidget(button)
+        button_layout.addWidget(button_upper)
+        button_layout.addWidget(button_lower)
+        self.db_layout.addLayout(button_layout)
+
         # Подключаем к функции
         button.clicked.connect(
             lambda: self.send_to_core(
                 UiMsg.ADD_WORD_TO_BASE,
-                self.db_buttons.index(button)
+                self.db_buttons.index(elements)
+            )
+        )
+        button_upper.clicked.connect(
+            lambda: self.send_to_core(
+                UiMsg.ADD_WORD_TO_BASE_upper,
+                self.db_buttons.index(elements)
+            )
+        )
+        button_lower.clicked.connect(
+            lambda: self.send_to_core(
+                UiMsg.ADD_WORD_TO_BASE_lower,
+                self.db_buttons.index(elements)
             )
         )
 
     def delete_db_button(self, index):
-        self.db_buttons.pop(index).deleteLater()
+        for elem in self.db_buttons.pop(index):
+            elem.deleteLater()
 
     def refresh(self):
         for i, button in enumerate(self.db_buttons):
             if self.core.database(i).path:
                 if self.core.database(i).name:
-                    button.setText(self.core.database(i).name)
+                    button[0].setText(self.core.database(i).name)
                 else:
-                    button.setText(
+                    button[0].setText(
                         f'<{self.core.database(i).path.name}><без имени>'
                     )
-                button.setVisible(True)
+                button[0].setVisible(True)
+                button[1].setVisible(True)
+                button[2].setVisible(True)
             else:
-                button.setVisible(False)
+                button[0].setVisible(False)
+                button[1].setVisible(False)
+                button[2].setVisible(False)
 
 
 class WorkTab(CustomQWidget):
@@ -965,6 +993,7 @@ class MainWindow(QMainWindow):
             case CoreMsg.DB_SLOT_ADDED:
                 self.config_tab.create_db_slot(from_core=True)
                 self.work_tab.decision_buttons_group.add_db_button()
+                self.work_tab.decision_buttons_group.refresh()
                 self.words_to_save_tab.create_words_to_db_group()
 
             case CoreMsg.DB_SLOT_DELETED:
