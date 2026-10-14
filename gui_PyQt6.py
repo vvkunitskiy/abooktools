@@ -470,6 +470,11 @@ class DecisionButtonsGroup(CustomQWidget):
         # КНОПКА "игнорировать"
         self.ignore = QPushButton('Игнорировать')
 
+        # Кнопки активации/деактивации режима добавления в несколько баз
+        self.multi_add_on = QPushButton('M ON')
+        self.multi_add_off = QPushButton('M OFF')
+        self.multi_add_off.setVisible(False)
+
         # КНОПКИ добавления в базы
         self.db_buttons = []
 
@@ -477,6 +482,8 @@ class DecisionButtonsGroup(CustomQWidget):
         line = QHBoxLayout()
         line.addWidget(self.ignore)
         line.addWidget(self.skip)
+        line.addWidget(self.multi_add_on)
+        line.addWidget(self.multi_add_off)
 
         #self.db = QWidget()
         self.db_layout = QVBoxLayout()
@@ -491,6 +498,24 @@ class DecisionButtonsGroup(CustomQWidget):
         )
         self.ignore.clicked.connect(
             lambda: self.send_to_core(UiMsg.IGNORE_WORD)
+        )
+        self.multi_add_on.clicked.connect(
+            lambda: self.send_to_core(UiMsg.MULTI_ADD_ON)
+        )
+        self.multi_add_on.clicked.connect(
+            lambda: self.multi_add_on.setVisible(False)
+        )
+        self.multi_add_on.clicked.connect(
+            lambda: self.multi_add_off.setVisible(True)
+        )
+        self.multi_add_off.clicked.connect(
+            lambda: self.send_to_core(UiMsg.MULTI_ADD_OFF)
+        )
+        self.multi_add_off.clicked.connect(
+            lambda: self.multi_add_off.setVisible(False)
+        )
+        self.multi_add_off.clicked.connect(
+            lambda: self.multi_add_on.setVisible(True)
         )
 
     def add_db_button(self):

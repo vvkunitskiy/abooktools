@@ -32,6 +32,8 @@ class Core:
         self.__current_word_position_index: int = 0
         self.__current_name_position_index: int = 0
 
+        self.__multi_add_status = False
+
     @property
     def current_word(self) -> Word:
         if self.__current_queue == 0:
@@ -276,12 +278,23 @@ class Core:
                     self.__current_name_position_index = 0
                 self.__send_to_ui(CoreMsg.NEXT_WORD)
 
+            case UiMsg.MULTI_ADD_ON:
+                self.__multi_add_status = True
+
+            case UiMsg.MULTI_ADD_OFF:
+                self.__multi_add_status = False
+                if self.current_queue:
+                    if self.current_word.status == WordStatus.HANDLED:
+                        self.current_queue.goto_next()
+                        self.__send_to_ui(CoreMsg.NEXT_WORD)                        
+
             case UiMsg.ADD_WORD_TO_BASE:
                 if self.current_queue:
                     self.current_word.status = WordStatus.HANDLED
                 self.__dbs[extra].buffer.append(self.current_word)
-                self.current_queue.goto_next()
-                self.__send_to_ui(CoreMsg.NEXT_WORD)
+                if not self.__multi_add_status:
+                    self.current_queue.goto_next()
+                    self.__send_to_ui(CoreMsg.NEXT_WORD)
 
             case UiMsg.ADD_WORD_TO_BASE_upper:
                 w = str(self.current_word)
@@ -298,8 +311,9 @@ class Core:
                 if self.current_queue:
                     self.current_word.status = WordStatus.HANDLED
                 self.__dbs[extra].buffer.append(self.current_word)
-                self.current_queue.goto_next()
-                self.__send_to_ui(CoreMsg.NEXT_WORD)
+                if not self.__multi_add_status:
+                    self.current_queue.goto_next()
+                    self.__send_to_ui(CoreMsg.NEXT_WORD)
 
             case UiMsg.ADD_WORD_TO_BASE_lower:
                 w = str(self.current_word)
@@ -316,8 +330,9 @@ class Core:
                 if self.current_queue:
                     self.current_word.status = WordStatus.HANDLED
                 self.__dbs[extra].buffer.append(self.current_word)
-                self.current_queue.goto_next()
-                self.__send_to_ui(CoreMsg.NEXT_WORD)
+                if not self.__multi_add_status:
+                    self.current_queue.goto_next()
+                    self.__send_to_ui(CoreMsg.NEXT_WORD)
 
             case UiMsg.DB_SLOT_ADDED:
                 self.__dbs.append(DataBase())
