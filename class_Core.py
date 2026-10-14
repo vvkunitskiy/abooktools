@@ -396,12 +396,20 @@ class Core:
                     if word in db.words:
                         in_dbs = True
                         break
+                    w = word[0].upper() + word[1:]
+                    if w in db.words:
+                        in_dbs = True
+                        break
                 if not in_dbs:
                     self.__words_queue.append(word)
             for name in self.__text.unique_names:
                 in_dbs = False
                 for db in active_dbs:
                     if name in db.words:
+                        in_dbs = True
+                        break
+                    n = name[0].lower() + name[1:]
+                    if n in db.words:
                         in_dbs = True
                         break
                 if not in_dbs:
