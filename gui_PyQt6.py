@@ -710,7 +710,7 @@ class WordsToSaveTab(CustomQWidget):
         )
 
         '''Размещаем объекты'''
-        root.addWidget(self.sub_root_widget)
+        root.addWidget(scroll)
 
         '''Подключаем кнопки/события к функциям'''
         pass
