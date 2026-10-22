@@ -707,6 +707,7 @@ class WordsToSaveTab(CustomQWidget):
         '''Создаём объекты, задаём параметры'''
         self.sub_root_widget = CustomQWidget(self)
         self.sub_root = QVBoxLayout(self.sub_root_widget)
+        self.button_sort_and_save_all_db = QPushButton('Сохранить все базы с сортировкой слов')
 
         scroll = QScrollArea()
         scroll.setWidget(self.sub_root_widget)
@@ -719,10 +720,18 @@ class WordsToSaveTab(CustomQWidget):
         )
 
         '''Размещаем объекты'''
+        root.addWidget(self.button_sort_and_save_all_db)
         root.addWidget(scroll)
 
         '''Подключаем кнопки/события к функциям'''
-        pass
+        self.button_sort_and_save_all_db.clicked.connect(
+            lambda: self.sort_and_save_all_db()
+        )
+
+    def sort_and_save_all_db(self):
+        for w2dbg in self.w2dbg_list:
+            w2dbg.db.save(sort_db_words=True)
+            w2dbg.refresh()
 
     def refresh(self):
         for i, widget in enumerate(self.w2dbg_list):
