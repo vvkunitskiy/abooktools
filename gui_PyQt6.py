@@ -26,7 +26,7 @@ try:
     from PyQt6.QtCore import (
         Qt, QSize, QMargins
     )
-    from PyQt6.QtGui import QColor, QFont, QTextCharFormat
+    from PyQt6.QtGui import QColor, QFont, QTextCharFormat, QShortcut, QKeySequence
 except ModuleNotFoundError:
     from PySide6.QtWidgets import (
         QApplication, QMainWindow,
@@ -40,7 +40,7 @@ except ModuleNotFoundError:
     from PySide6.QtCore import (
         Qt, QSize, QMargins
     )
-    from PySide6.QtGui import QColor, QFont, QTextCharFormat
+    from PySide6.QtGui import QColor, QFont, QTextCharFormat, QShortcut, QKeySequence
 
 
 class CustomQWidget(QWidget):
@@ -980,6 +980,7 @@ class MainWindow(QMainWindow):
 
         self.init_widgets()
         self.core.load_config()
+        self.init_shortcuts()
         self.show()
         self.application.exec()
 
@@ -1001,6 +1002,21 @@ class MainWindow(QMainWindow):
             'Сохранение слов в базы'
         )
         self.centralWidget().addTab(self.config_tab, 'Конфигурация')
+
+    def init_shortcuts(self):
+        # Space: нажать кнопку добавления в первую базу в списке
+        QShortcut(
+            QKeySequence(Qt.Key.Key_Space),
+            self,
+            activated=lambda: self.send_to_core(UiMsg.ADD_WORD_TO_BASE, 0)  # или ваше сообщение
+        ).setContext(Qt.ShortcutContext.ApplicationShortcut)
+
+        # Backspace: отмена добавлений для последнего слова
+        QShortcut(
+            QKeySequence(Qt.Key.Key_Backspace),
+            self,
+            activated=lambda: self.send_to_core(UiMsg.CANCEL_LAST_WORD_ADD)
+        ).setContext(Qt.ShortcutContext.ApplicationShortcut)
 
     def ui_receiver(self, msg: CoreMsg, extra = None):
         match msg:
