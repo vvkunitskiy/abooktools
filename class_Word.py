@@ -39,7 +39,8 @@ class Word(str):
 
         if 'ё' in word or 'Ё' in word:
             variant = word.replace('ё', 'е').replace('Ё','Е')
-            self.__variants.append(variant)
+            if variant not in self.__variants:
+                self.__variants.append(variant)
 
     def __repr__(self):
         return f'{self}({self.variants}{self.stress}{self.info}{self.positions}{self.status.value})'
