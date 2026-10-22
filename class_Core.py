@@ -33,6 +33,7 @@ class Core:
         self.__current_name_position_index: int = 0
 
         self.__multi_add_status = False
+        self.__last_add = {'dbs': [], 'word': None}
 
     @property
     def current_word(self) -> Word:
@@ -292,6 +293,12 @@ class Core:
                 if self.current_queue:
                     self.current_word.status = WordStatus.HANDLED
                 self.__dbs[extra].buffer.append(self.current_word)
+                if self.__last_add['word'] == self.current_word:
+                    self.__last_add['dbs'].append(extra)
+                else:
+                    self.__last_add['word'] = self.current_word
+                    self.__last_add['dbs'].clear()
+                    self.__last_add['dbs'].append(extra)
                 if not self.__multi_add_status:
                     self.current_queue.goto_next()
                     self.__send_to_ui(CoreMsg.NEXT_WORD)
@@ -311,6 +318,12 @@ class Core:
                 if self.current_queue:
                     self.current_word.status = WordStatus.HANDLED
                 self.__dbs[extra].buffer.append(self.current_word)
+                if self.__last_add['word'] == self.current_word:
+                    self.__last_add['dbs'].append(extra)
+                else:
+                    self.__last_add['word'] = self.current_word
+                    self.__last_add['dbs'].clear()
+                    self.__last_add['dbs'].append(extra)
                 if not self.__multi_add_status:
                     self.current_queue.goto_next()
                     self.__send_to_ui(CoreMsg.NEXT_WORD)
@@ -330,9 +343,35 @@ class Core:
                 if self.current_queue:
                     self.current_word.status = WordStatus.HANDLED
                 self.__dbs[extra].buffer.append(self.current_word)
+                if self.__last_add['word'] == self.current_word:
+                    self.__last_add['dbs'].append(extra)
+                else:
+                    self.__last_add['word'] = self.current_word
+                    self.__last_add['dbs'].clear()
+                    self.__last_add['dbs'].append(extra)
                 if not self.__multi_add_status:
                     self.current_queue.goto_next()
                     self.__send_to_ui(CoreMsg.NEXT_WORD)
+
+            case UiMsg.CANCEL_LAST_WORD_ADD:
+                if self.__last_add['word']:
+                    is_cancel_allowed = True
+                    for db_index in self.__last_add['dbs']:
+                        if self.__last_add['word'] in self.__dbs[db_index].buffer:
+                            pass
+                        else:
+                            is_cancel_allowed = False
+                            break
+                    if is_cancel_allowed:
+                        for db_index in self.__last_add['dbs']:
+                            if self.__last_add['word'] in self.__dbs[db_index].buffer:
+                                self.__dbs[db_index].buffer.remove(self.__last_add['word'])
+                        self.__last_add['word'].status = WordStatus.PENDING
+                        while self.current_word != self.__last_add['word']:
+                            self.current_queue.goto_next()
+                        self.__last_add['word'] = None
+                        self.__last_add['dbs'].clear()
+                        self.__send_to_ui(CoreMsg.NEXT_WORD)
 
             case UiMsg.DB_SLOT_ADDED:
                 self.__dbs.append(DataBase())
@@ -363,9 +402,14 @@ class Core:
 
             case UiMsg.CHANGE_CURRENT_WORD:
                 if extra:
-                    while self.current_word != extra:
-                        self.current_queue.goto_next()
-                    self.__send_to_ui(CoreMsg.NEXT_WORD)
+                    for word in self.current_queue:
+                        if word == extra:
+                            if word.status == WordStatus.PENDING:
+                                while self.current_word != extra:
+                                    self.current_queue.goto_next()
+                                self.__send_to_ui(CoreMsg.NEXT_WORD)
+                            else:
+                                self.__send_to_ui(CoreMsg.NEXT_WORD)
 
     def __send_to_ui(self, msg: CoreMsg, extra = None):
         self.ui.ui_receiver(msg, extra)

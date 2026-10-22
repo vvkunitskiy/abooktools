@@ -237,7 +237,9 @@ class QueueTab(CustomQWidget):
             button.clicked.connect(lambda checked, n=name: self.on_show_mode_button_clicked(n))
 
         self.list.clicked.connect(
-            lambda: self.send_to_core(UiMsg.CHANGE_CURRENT_WORD, self.list.currentItem().text().split(maxsplit=1)[0] if self.list.currentItem() else None)
+            lambda: self.send_to_core(
+                UiMsg.CHANGE_CURRENT_WORD,
+                self.list.currentItem().text().split(maxsplit=1)[0] if self.list.currentItem() else None)
         )
 
     def on_sort_button_clicked(self, button_name):
@@ -475,11 +477,15 @@ class DecisionButtonsGroup(CustomQWidget):
         self.multi_add_off = QPushButton('M OFF')
         self.multi_add_off.setVisible(False)
 
+        # Кнопка отмены последнего добавления
+        self.cancel = QPushButton('<-')
+
         # КНОПКИ добавления в базы
         self.db_buttons = []
 
         '''Размещаем объекты'''
         line = QHBoxLayout()
+        line.addWidget(self.cancel)
         line.addWidget(self.ignore)
         line.addWidget(self.skip)
         line.addWidget(self.multi_add_on)
@@ -516,6 +522,9 @@ class DecisionButtonsGroup(CustomQWidget):
         )
         self.multi_add_off.clicked.connect(
             lambda: self.multi_add_on.setVisible(True)
+        )
+        self.cancel.clicked.connect(
+            lambda: self.send_to_core(UiMsg.CANCEL_LAST_WORD_ADD)
         )
 
     def add_db_button(self):
@@ -716,12 +725,12 @@ class WordsToSaveTab(CustomQWidget):
         pass
 
     def refresh(self):
-        for w in self.sub_root.children():
-            self.sub_root.removeWidget(w)
         for i, widget in enumerate(self.w2dbg_list):
+            widget.refresh()
             if self.core.database(i).buffer_word_count:
-                self.sub_root.addWidget(widget)
-                widget.refresh()
+                widget.setVisible(True)
+            else:
+                widget.setVisible(False)
 
     def create_words_to_db_group(self):
         self.w2dbg_list.append(
@@ -730,6 +739,7 @@ class WordsToSaveTab(CustomQWidget):
                 self.core.database(len(self.w2dbg_list))
             )
         )
+        self.sub_root.addWidget(self.w2dbg_list[-1])
 
     def delete_words_to_db_group(self, index: int):
         self.w2dbg_list.pop(index).deleteLater()
